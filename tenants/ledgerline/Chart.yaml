@@ -1,0 +1,5 @@
+apiVersion: v2
+name: ledgerline
+description: Ledgerline (payments ledger) as a Baseplate tenant, with its Kafka and PostgreSQL.
+type: application
+version: 0.1.0

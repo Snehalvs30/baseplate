@@ -1,0 +1,6 @@
+# Local kind cluster on an 8 GB Mac.
+replicas: 1
+postgres:
+  enabled: true
+ingress:
+  host: ledgerline.localhost

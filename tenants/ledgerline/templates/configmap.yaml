@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ledgerline-config
+  labels:
+    {{- include "ledgerline.labels" . | nindent 4 }}
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://{{ .Values.database.host }}:5432/{{ .Values.database.name }}{{ .Values.database.urlOptions }}"
+  DB_USERNAME: {{ .Values.database.username | quote }}
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  # /actuator/health/liveness and /readiness for the probes.
+  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+  # Not ready (no traffic) while the database is unreachable.
+  MANAGEMENT_ENDPOINT_HEALTH_GROUP_READINESS_INCLUDE: "readinessState,db"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "never"
