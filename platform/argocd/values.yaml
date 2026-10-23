@@ -1,0 +1,30 @@
+# ArgoCD, trimmed to what GitOps needs, sized for an 8 GB laptop.
+dex:
+  enabled: false            # no single sign-on locally; we sign in as admin
+notifications:
+  enabled: false
+applicationSet:
+  enabled: false            # App-of-Apps doesn't need it
+
+configs:
+  params:
+    server.insecure: true   # plain HTTP inside the cluster; we reach it by port-forward
+  cm:
+    timeout.reconciliation: 60s   # check Git every 60 seconds (default: 3 minutes)
+
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 768Mi }
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+server:
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 256Mi }
+redis:
+  resources:
+    requests: { cpu: 50m, memory: 32Mi }
+    limits: { memory: 128Mi }

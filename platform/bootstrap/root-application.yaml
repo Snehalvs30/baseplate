@@ -1,0 +1,22 @@
+# The root of App-of-Apps: applied once by hand. From then on, every Application
+# file in platform/bootstrap/apps is created, updated or deleted from Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting root cleans up its children
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Snehalvs30/baseplate.git
+    targetRevision: main
+    path: platform/bootstrap/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true      # a file removed from Git removes its app
+      selfHeal: true   # manual changes in the cluster are reverted
