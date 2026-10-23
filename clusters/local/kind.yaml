@@ -1,0 +1,23 @@
+# A 1-node local cluster, sized for an 8 GB Mac. The single node is both control
+# plane and worker. The AWS cluster (EKS) gets multiple nodes.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: baseplate
+networking:
+  # kind's built-in network plugin ignores NetworkPolicies. Turning it off
+  # lets us install Calico, which enforces them (needed for tenant isolation).
+  disableDefaultCNI: true
+  podSubnet: 192.168.0.0/16
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:     # lets the ingress controller receive traffic on localhost
+      - containerPort: 80
+        hostPort: 80
+      - containerPort: 443
+        hostPort: 443

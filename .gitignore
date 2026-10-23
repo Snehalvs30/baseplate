@@ -1,0 +1,7 @@
+# Terraform state and variables can contain secrets
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+.DS_Store
