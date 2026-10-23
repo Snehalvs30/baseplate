@@ -29,6 +29,22 @@ spec:
         runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      # Wait until the database accepts connections, so the app (which runs
+      # migrations on startup) starts once, cleanly, instead of crash-looping.
+      initContainers:
+        - name: wait-for-database
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - until nc -z -w 2 {{ .Values.database.host }} 5432; do echo "waiting for database"; sleep 2; done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
       containers:
         - name: footnote
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
