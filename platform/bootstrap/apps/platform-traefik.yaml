@@ -37,6 +37,7 @@ spec:
         ingressClass:
           enabled: true
           isDefaultClass: true
+          name: traefik 
         resources:
           requests: { cpu: 50m, memory: 64Mi }
           limits: { memory: 192Mi }
