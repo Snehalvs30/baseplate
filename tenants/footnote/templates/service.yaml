@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: footnote
+  labels:
+    {{- include "footnote.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: footnote
+    app.kubernetes.io/component: app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

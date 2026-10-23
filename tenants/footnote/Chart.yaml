@@ -1,0 +1,5 @@
+apiVersion: v2
+name: footnote
+description: Footnote (document Q&A with citations) as a Baseplate tenant.
+type: application
+version: 0.1.0

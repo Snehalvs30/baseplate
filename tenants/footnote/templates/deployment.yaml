@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: footnote
+  labels:
+    {{- include "footnote.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0   # never remove a working pod before its replacement is ready
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: footnote
+      app.kubernetes.io/component: app
+  template:
+    metadata:
+      labels:
+        {{- include "footnote.labels" . | nindent 8 }}
+        app.kubernetes.io/component: app
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001    # the unprivileged user built into the image
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: footnote
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: database-password
+            # $(DB_PASSWORD) is filled in by Kubernetes from the variable above.
+            - name: FOOTNOTE_DATABASE_URL
+              value: "postgresql+psycopg://footnote:$(DB_PASSWORD)@{{ .Values.database.host }}:5432/footnote{{ .Values.database.urlOptions }}"
+            - name: FOOTNOTE_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: jwt-secret
+            - name: FOOTNOTE_ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: anthropic-api-key
+            - name: FOOTNOTE_LLM_PROVIDER
+              value: {{ .Values.llmProvider | quote }}
+            - name: FOOTNOTE_COOKIE_SECURE
+              value: {{ .Values.cookieSecure | quote }}
+          # Startup runs migrations and loads the embedding model: allow up to 3 minutes.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          # Ready = can serve requests, including reaching the database.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+          # Alive = the process responds at all. Deliberately not the health check:
+          # a database outage should stop traffic (readiness), not restart the app.
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

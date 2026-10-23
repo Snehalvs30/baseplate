@@ -1,0 +1,75 @@
+{{- if .Values.postgres.enabled }}
+# Local-only database: PostgreSQL with pgvector, one replica, a small volume.
+# On EKS this is disabled and the app uses RDS.
+apiVersion: v1
+kind: Service
+metadata:
+  name: footnote-postgres
+  labels:
+    {{- include "footnote.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  selector:
+    app.kubernetes.io/name: footnote
+    app.kubernetes.io/component: database
+  ports:
+    - name: postgres
+      port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: footnote-postgres
+  labels:
+    {{- include "footnote.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  serviceName: footnote-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: footnote
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        {{- include "footnote.labels" . | nindent 8 }}
+        app.kubernetes.io/component: database
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: footnote
+            - name: POSTGRES_USER
+              value: footnote
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: database-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata   # a subfolder, as the volume root isn't empty
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "footnote", "-d", "footnote"]
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 384Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
+{{- end }}

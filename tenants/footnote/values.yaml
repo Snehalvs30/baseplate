@@ -1,0 +1,39 @@
+# Defaults for every environment. Environment files (values-local.yaml, later
+# values-eks.yaml) override only what differs.
+
+image:
+  repository: ghcr.io/snehalvs30/footnote
+  tag: latest          # releases pin an exact build (sha-xxxxxxx) by changing this line in Git
+  pullPolicy: Always
+
+replicas: 1
+
+# Kubernetes Secret holding database-password, jwt-secret and anthropic-api-key.
+# Created by hand locally for now; External Secrets Operator creates it from
+# AWS Secrets Manager from Day 6.
+secretName: footnote-secrets
+
+llmProvider: anthropic
+cookieSecure: true     # session cookies only over HTTPS
+
+database:
+  host: footnote-postgres
+  urlOptions: ""       # e.g. "?sslmode=require" for RDS
+
+# In-cluster PostgreSQL with pgvector: for local clusters. EKS uses RDS instead.
+postgres:
+  enabled: false
+  image: pgvector/pgvector:pg17
+  storage: 1Gi
+
+ingress:
+  enabled: true
+  className: traefik
+  host: footnote.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 768Mi      # the embedding model is loaded at startup
+  limits:
+    memory: 1536Mi

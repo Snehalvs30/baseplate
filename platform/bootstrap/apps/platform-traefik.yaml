@@ -1,0 +1,51 @@
+# Ingress controller: routes requests for app hostnames (like footnote.localhost)
+# to the right service. Traefik instead of Ingress-NGINX, which is being retired.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-traefik
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://traefik.github.io/charts
+    chart: traefik
+    targetRevision: 42.1.3
+    helm:
+      valuesObject:
+        # kind: listen directly on the node's ports 80/443, which kind maps to the Mac.
+        ports:
+          web:
+            hostPort: 80
+          websecure:
+            hostPort: 443
+        service:
+          type: ClusterIP
+        nodeSelector:
+          ingress-ready: "true"
+        tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
+        # Host ports can't be shared, so replace the pod instead of overlapping two.
+        updateStrategy:
+          rollingUpdate:
+            maxUnavailable: 1
+            maxSurge: 0
+        ingressClass:
+          enabled: true
+          isDefaultClass: true
+        resources:
+          requests: { cpu: 50m, memory: 64Mi }
+          limits: { memory: 192Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform-traefik
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

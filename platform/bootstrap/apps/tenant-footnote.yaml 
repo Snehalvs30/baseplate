@@ -1,0 +1,27 @@
+# Footnote tenant: the Helm chart in this repository, with local-cluster values.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tenant-footnote
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Snehalvs30/baseplate.git
+    targetRevision: main
+    path: tenants/footnote
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-local.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tenant-footnote
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

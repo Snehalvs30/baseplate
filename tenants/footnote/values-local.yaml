@@ -1,0 +1,6 @@
+# Local kind cluster.
+cookieSecure: false    # the local cluster serves plain HTTP
+postgres:
+  enabled: true
+ingress:
+  host: footnote.localhost   # browsers send *.localhost to 127.0.0.1, so no DNS setup
