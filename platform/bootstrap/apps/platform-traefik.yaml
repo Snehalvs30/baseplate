@@ -15,41 +15,16 @@ spec:
     targetRevision: 42.1.3
     helm:
       valuesObject:
-        
-        # kind: listen directly on the node's ports 80/443, which kind maps to the Mac.
-                # Write "localhost" into each Ingress's status: that's where apps are reached
-        # on kind. ArgoCD treats an Ingress without an address as still progressing.
-        additionalArguments:
-          - "--providers.kubernetesingress.ingressendpoint.hostname=localhost"
-        providers:
-          kubernetesIngress:
-            # Don't copy the address from Traefik's own Service (it's ClusterIP on kind,
-            # so it has none); use the hostname in additionalArguments instead.
-            publishedService:
-              enabled: false
-        ports:
-          web:
-            hostPort: 80
-          websecure:
-            hostPort: 443
+        # A LoadBalancer service: k3s's built-in ServiceLB provides it locally, and k3d
+        # maps ports 80/443 on the Mac to it. On EKS, AWS provides a real load balancer.
+        # The service's address is also written into each Ingress's status.
         service:
-            spec:
-                type: ClusterIP 
-        nodeSelector:
-          ingress-ready: "true"
-        tolerations:
-          - key: node-role.kubernetes.io/control-plane
-            operator: Exists
-            effect: NoSchedule
-        # Host ports can't be shared, so replace the pod instead of overlapping two.
-        updateStrategy:
-          rollingUpdate:
-            maxUnavailable: 1
-            maxSurge: 0
+          spec:
+            type: LoadBalancer
         ingressClass:
           enabled: true
           isDefaultClass: true
-          name: traefik 
+          name: traefik        # a stable name, independent of the release name
         resources:
           requests: { cpu: 50m, memory: 64Mi }
           limits: { memory: 192Mi }

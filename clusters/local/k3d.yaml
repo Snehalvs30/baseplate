@@ -1,0 +1,24 @@
+# Local cluster with k3d: k3s (a lightweight Kubernetes distribution) running in Docker.
+# Chosen over kind for an 8 GB laptop: k3s runs the whole control plane as one process
+# with an embedded database, uses far less CPU and memory, and enforces NetworkPolicies
+# without a separate network plugin.
+#
+#   k3d cluster create --config clusters/local/k3d.yaml
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: baseplate
+servers: 1
+agents: 0
+ports:
+  # Browser -> localhost:80/443 -> k3d's load balancer -> Traefik's LoadBalancer service.
+  - port: 80:80
+    nodeFilters: [loadbalancer]
+  - port: 443:443
+    nodeFilters: [loadbalancer]
+options:
+  k3s:
+    extraArgs:
+      # k3s bundles its own Traefik; the platform installs and manages its own through GitOps.
+      - arg: --disable=traefik
+        nodeFilters: [server:*]
