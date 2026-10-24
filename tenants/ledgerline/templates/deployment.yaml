@@ -29,9 +29,13 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: /actuator/prometheus
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       enableServiceLinks: false
-      terminationGracePeriodSeconds: 30
+      # Time for the preStop pause plus finishing in-flight requests.
+      terminationGracePeriodSeconds: {{ add .Values.gracefulShutdown.preStopSeconds 30 }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -110,6 +114,15 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if gt (int .Values.gracefulShutdown.preStopSeconds) 0 }}
+          # On shutdown, Kubernetes stops the pod AND removes it from routing at the same
+          # time. Pausing first lets Traefik drop it from its list before the app stops
+          # accepting requests, so nothing in flight hits a closed door.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "{{ .Values.gracefulShutdown.preStopSeconds }}"]
+          {{- end }}
           startupProbe:
             httpGet:
               path: /actuator/health/liveness

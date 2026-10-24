@@ -60,3 +60,11 @@ otel:
   agentImage: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.10.0
   endpoint: http://otel-collector.platform-observability:4318
   environment: local
+
+# Extra pod annotations. Changing one rolls the pods; used as a release marker in tests.
+podAnnotations: {}
+
+# Zero-downtime rollouts: pause this long after a pod is told to stop, so routing
+# updates before the app closes its port. 0 disables the pause.
+gracefulShutdown:
+  preStopSeconds: 0
