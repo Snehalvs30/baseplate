@@ -7,4 +7,4 @@ ingress:
 externalSecret:
   remoteKey: baseplate/local/ledgerline
 otel:
-  enabled: true
+  enabled: false
