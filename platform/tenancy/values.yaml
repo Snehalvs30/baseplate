@@ -39,6 +39,10 @@ tenants:
 # Where the ingress controller runs: the only namespace allowed to send traffic in.
 ingressNamespace: platform-traefik
 
+# Where the monitoring stack runs: it may scrape each tenant's app port, and tenants
+# may send traces to its collector.
+observabilityNamespace: platform-observability
+
 # Who may look inside a tenant's namespace. In a real company these groups come
 # from single sign-on (e.g. "team-payments" in the identity provider).
 developerGroupPrefix: "tenant:"

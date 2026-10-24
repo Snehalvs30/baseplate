@@ -1,0 +1,59 @@
+# Grafana: dashboards and trace exploration, at http://grafana.localhost
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-grafana
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    targetRevision: 10.5.15
+    helm:
+      valuesObject:
+        fullnameOverride: grafana
+        persistence:
+          enabled: false
+        resources:
+          requests: { cpu: 25m, memory: 96Mi }
+          limits: { memory: 256Mi }
+        ingress:
+          enabled: true
+          ingressClassName: traefik
+          hosts:
+            - grafana.localhost
+          path: /
+        grafana.ini:
+          analytics:
+            reporting_enabled: false
+            check_for_updates: false
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Prometheus
+                uid: prometheus
+                type: prometheus
+                url: http://prometheus-server.platform-observability.svc
+                access: proxy
+                isDefault: true
+              - name: Tempo
+                uid: tempo
+                type: tempo
+                url: http://tempo.platform-observability.svc:3200
+                access: proxy
+                jsonData:
+                  nodeGraph:
+                    enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform-observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,4 +1,5 @@
 {{- $ingressNamespace := .Values.ingressNamespace }}
+{{- $observabilityNamespace := .Values.observabilityNamespace }}
 {{- range .Values.tenants }}
 ---
 # 1. Deny everything, in and out. Every allowed path below is an explicit exception.
@@ -64,9 +65,35 @@ spec:
               kubernetes.io/metadata.name: {{ $ingressNamespace }}
       ports:
         - { protocol: TCP, port: {{ .appPort }} }
+---
+# 5. Monitoring: Prometheus may scrape the app port; pods may send traces to the
+#    OpenTelemetry Collector (OTLP over gRPC 4317 or HTTP 4318).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-observability
+  namespace: {{ .namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $observabilityNamespace }}
+      ports:
+        - { protocol: TCP, port: {{ .appPort }} }
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $observabilityNamespace }}
+      ports:
+        - { protocol: TCP, port: 4317 }
+        - { protocol: TCP, port: 4318 }
 {{- if .internetEgress }}
 ---
-# 5. Outbound HTTPS to the internet only (e.g. an LLM API). Private address ranges
+# 6. Outbound HTTPS to the internet only (e.g. an LLM API). Private address ranges
 #    are excluded, so this can't be used to reach other tenants or cloud internals.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
