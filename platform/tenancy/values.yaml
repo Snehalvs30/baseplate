@@ -1,0 +1,44 @@
+# One entry per tenant. The platform team owns everything here; each tenant's own
+# chart (tenants/<name>) only deploys the application into its namespace.
+#
+#   appPort         the port Traefik may reach (all other ingress is denied)
+#   internetEgress  whether pods may make outbound HTTPS calls (e.g. to an LLM API)
+#   quota           the most the tenant can reserve, so one can't starve the others
+
+tenants:
+  - name: podinfo
+    namespace: tenant-podinfo
+    appPort: 9898
+    internetEgress: false
+    quota:
+      requests.cpu: 500m
+      requests.memory: 256Mi
+      limits.memory: 512Mi
+      pods: "10"
+
+  - name: footnote
+    namespace: tenant-footnote
+    appPort: 8000
+    internetEgress: true      # calls the Anthropic API
+    quota:
+      requests.cpu: "1"
+      requests.memory: 2Gi
+      limits.memory: 4Gi      # room for a rolling update (old + new pod side by side)
+      pods: "10"
+
+  - name: ledgerline
+    namespace: tenant-ledgerline
+    appPort: 8080
+    internetEgress: false     # talks only to its own database and Kafka
+    quota:
+      requests.cpu: "1500m"
+      requests.memory: 2Gi
+      limits.memory: 3Gi
+      pods: "10"
+
+# Where the ingress controller runs: the only namespace allowed to send traffic in.
+ingressNamespace: platform-traefik
+
+# Who may look inside a tenant's namespace. In a real company these groups come
+# from single sign-on (e.g. "team-payments" in the identity provider).
+developerGroupPrefix: "tenant:"

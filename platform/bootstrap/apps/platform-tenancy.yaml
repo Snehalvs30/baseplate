@@ -1,0 +1,21 @@
+# Namespaces, quotas, network isolation and access rules for every tenant.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-tenancy
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Snehalvs30/baseplate.git
+    targetRevision: main
+    path: platform/tenancy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

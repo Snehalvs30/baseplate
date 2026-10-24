@@ -1,0 +1,36 @@
+{{- range .Values.tenants }}
+---
+# The most this tenant can reserve. Pods that would exceed it are rejected.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-quota
+  namespace: {{ .namespace }}
+spec:
+  hard:
+    {{- range $resource, $amount := .quota }}
+    {{ $resource }}: {{ $amount | quote }}
+    {{- end }}
+    # Tenants can't create cloud load balancers or node ports: all traffic enters
+    # through the platform's ingress controller (and nobody gets a surprise AWS bill).
+    services.loadbalancers: "0"
+    services.nodeports: "0"
+---
+# Defaults for containers that don't declare resources, so the quota above can be
+# enforced, plus a ceiling per container.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-defaults
+  namespace: {{ .namespace }}
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+      default:
+        memory: 256Mi
+      max:
+        memory: 2Gi
+{{- end }}

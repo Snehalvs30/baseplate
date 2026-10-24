@@ -1,0 +1,39 @@
+{{- $prefix := .Values.developerGroupPrefix }}
+{{- range .Values.tenants }}
+---
+# What a tenant's developers may do in THEIR namespace: look, read logs, and
+# port-forward for debugging. No changes (changes go through Git and ArgoCD), and
+# no reading Secrets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-developer
+  namespace: {{ .namespace }}
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, services, endpoints, configmaps, events, persistentvolumeclaims]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/portforward]
+    verbs: [create]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, replicasets]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-developers
+  namespace: {{ .namespace }}
+subjects:
+  - kind: Group
+    name: {{ printf "%s%s:developers" $prefix .name }}
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: tenant-developer
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

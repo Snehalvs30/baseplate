@@ -1,0 +1,16 @@
+== Network isolation ==
+FAIL: another tenant (podinfo) cannot reach Ledgerline's database
+FAIL: another tenant (podinfo) cannot call Ledgerline's API directly
+FAIL: a pod outside any tenant cannot call Ledgerline
+PASS: Ledgerline's own pods still reach their database
+FAIL: Ledgerline cannot reach the internet
+PASS: traffic through the ingress controller still works
+== Quotas ==
+FAIL: a pod asking for more than the tenant's quota was accepted
+== Access (RBAC) ==
+FAIL: developers can't see their own pods
+PASS: Ledgerline developers cannot see another tenant's pods
+PASS: developers cannot read Secrets, even their own
+PASS: developers cannot change workloads directly (changes go through Git)
+
+5 passed, 6 failed

@@ -1,0 +1,91 @@
+{{- $ingressNamespace := .Values.ingressNamespace }}
+{{- range .Values.tenants }}
+---
+# 1. Deny everything, in and out. Every allowed path below is an explicit exception.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ .namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# 2. Pods within the same tenant may talk to each other (app <-> database <-> Kafka).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-tenant
+  namespace: {{ .namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+# 3. DNS lookups, to the cluster's DNS service only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: {{ .namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# 4. The ingress controller may reach the application's port, and nothing else.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-ingress
+  namespace: {{ .namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $ingressNamespace }}
+      ports:
+        - { protocol: TCP, port: {{ .appPort }} }
+{{- if .internetEgress }}
+---
+# 5. Outbound HTTPS to the internet only (e.g. an LLM API). Private address ranges
+#    are excluded, so this can't be used to reach other tenants or cloud internals.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internet-https
+  namespace: {{ .namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16     # includes the cloud metadata service (169.254.169.254)
+      ports:
+        - { protocol: TCP, port: 443 }
+{{- end }}
+{{- end }}

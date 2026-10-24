@@ -1,0 +1,5 @@
+apiVersion: v2
+name: tenancy
+description: The platform side of each tenant - namespace, quotas, network isolation and access.
+type: application
+version: 0.1.0

@@ -1,0 +1,21 @@
+{{- range .Values.tenants }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .namespace }}
+  labels:
+    baseplate.io/tenant: {{ .name }}
+    # Pod Security Admission: reject pods that break the "baseline" rules (privileged
+    # containers, host networking...). "restricted" is the stricter goal: violations
+    # are reported as warnings for now, because the bundled PostgreSQL and Kafka
+    # images don't meet it yet.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+  annotations:
+    # Never delete a tenant's namespace (and its data) through ArgoCD, even if it is
+    # removed from this list or the application is deleted. Deleting one is a
+    # deliberate, manual decision.
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false
+{{- end }}
