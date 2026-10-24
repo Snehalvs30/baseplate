@@ -53,3 +53,10 @@ externalSecret:
   store: aws-secrets-manager
   remoteKey: ""
   refreshInterval: 1m   # short, so rotation shows up quickly; 1h is typical in production
+
+# Distributed tracing with the OpenTelemetry Java agent (no code changes).
+otel:
+  enabled: false
+  agentImage: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.10.0
+  endpoint: http://otel-collector.platform-observability:4318
+  environment: local

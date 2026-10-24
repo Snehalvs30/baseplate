@@ -6,3 +6,5 @@ ingress:
   host: ledgerline.localhost
 externalSecret:
   remoteKey: baseplate/local/ledgerline
+otel:
+  enabled: true

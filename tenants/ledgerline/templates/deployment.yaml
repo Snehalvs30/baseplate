@@ -25,6 +25,10 @@ spec:
       annotations:
         # A config change rolls the pods, so they pick it up.
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        # Prometheus finds pods to scrape by these annotations.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /actuator/prometheus
     spec:
       enableServiceLinks: false
       terminationGracePeriodSeconds: 30
@@ -48,6 +52,23 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+        {{- if .Values.otel.enabled }}
+        # Copies the OpenTelemetry Java agent into a shared volume. The app loads it
+        # at startup (JAVA_TOOL_OPTIONS below): tracing with no code changes.
+        - name: otel-agent
+          image: {{ .Values.otel.agentImage }}
+          command: ["cp", "/javaagent.jar", "/otel/javaagent.jar"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: otel-agent
+              mountPath: /otel
+        {{- end }}
       containers:
         - name: app
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -69,6 +90,24 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secretName }}
                   key: jwt-secret
+            {{- if .Values.otel.enabled }}
+            # OpenTelemetry: traces go to the platform's collector. Metrics stay on
+            # /actuator/prometheus (scraped directly), so the agent only sends traces.
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/otel/javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: ledgerline
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment={{ .Values.otel.environment }},baseplate.tenant=ledgerline"
+            - name: OTEL_METRICS_EXPORTER
+              value: none
+            - name: OTEL_LOGS_EXPORTER
+              value: none
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           startupProbe:
@@ -76,7 +115,7 @@ spec:
               path: /actuator/health/liveness
               port: http
             periodSeconds: 5
-            failureThreshold: 36
+            failureThreshold: 60   # up to 5 minutes: the tracing agent slows JVM startup
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
@@ -97,6 +136,15 @@ spec:
           volumeMounts:
             - name: tmp              # the JVM and Tomcat need a writable /tmp
               mountPath: /tmp
+            {{- if .Values.otel.enabled }}
+            - name: otel-agent
+              mountPath: /otel
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if .Values.otel.enabled }}
+        - name: otel-agent
+          emptyDir: {}
+        {{- end }}
