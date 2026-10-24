@@ -16,3 +16,13 @@ steps: install ArgoCD, recreate External Secrets Operator's AWS credentials, app
 application.
 
 EKS runs the control plane on separate, managed machines, so none of this applies there.
+
+## Network policies apply a few seconds after a pod starts (k3s)
+The isolation test found that a brand-new pod could reach the internet for a moment,
+although its namespace denies all egress. Once the pod had run for 30 seconds, the same
+connection was blocked: k3s's built-in policy controller (kube-router) programs a new
+pod's rules shortly after it starts. The policies are correct; there is a short window
+at startup. The isolation test now waits 10 seconds before each connection, so it
+measures the enforced state. Calico (used on kind) and the EKS network policy agent set
+up a pod's rules before its containers start, so production clusters shouldn't rely on
+k3s's behavior.

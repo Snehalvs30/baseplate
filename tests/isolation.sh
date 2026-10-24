@@ -11,9 +11,16 @@ pass() { echo "PASS: $1"; passed=$((passed + 1)); }
 fail() { echo "FAIL: $1"; failed=$((failed + 1)); }
 
 # connect <from-namespace> <host> <port>: succeeds if a TCP connection opens.
+# connect() {
+#   kubectl run "probe-$RANDOM" -n "$1" --image=busybox:1.37 --restart=Never \
+#     --rm -i --quiet --command -- nc -z -w 3 "$2" "$3" >/dev/null 2>&1
+# }
+# Waits SETTLE_SECONDS before connecting: on k3s, network policy rules for a brand-new
+# pod are programmed shortly after it starts, so an immediate connection can slip
+# through before they apply (see docs/local-cluster-notes.md).
 connect() {
   kubectl run "probe-$RANDOM" -n "$1" --image=busybox:1.37 --restart=Never \
-    --rm -i --quiet --command -- nc -z -w 3 "$2" "$3" >/dev/null 2>&1
+    --rm -i --quiet --command -- sh -c "sleep ${SETTLE_SECONDS:-10}; nc -z -w 3 $2 $3" >/dev/null 2>&1
 }
 expect_blocked() { if connect "$1" "$2" "$3"; then fail "$4"; else pass "$4"; fi; }
 expect_open()    { if connect "$1" "$2" "$3"; then pass "$4"; else fail "$4"; fi; }
