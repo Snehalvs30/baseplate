@@ -62,7 +62,9 @@ otel:
   environment: local
 
 # Extra pod annotations. Changing one rolls the pods; used as a release marker in tests.
-podAnnotations: {}
+# podAnnotations: {}
+podAnnotations:
+  baseplate.io/release: "1"
 
 # Zero-downtime rollouts: pause this long after a pod is told to stop, so routing
 # updates before the app closes its port. 0 disables the pause.
