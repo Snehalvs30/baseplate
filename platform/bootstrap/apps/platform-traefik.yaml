@@ -16,6 +16,10 @@ spec:
     helm:
       valuesObject:
         # kind: listen directly on the node's ports 80/443, which kind maps to the Mac.
+                # Write "localhost" into each Ingress's status: that's where apps are reached
+        # on kind. ArgoCD treats an Ingress without an address as still progressing.
+        additionalArguments:
+          - "--providers.kubernetesingress.ingressendpoint.hostname=localhost"
         ports:
           web:
             hostPort: 80
