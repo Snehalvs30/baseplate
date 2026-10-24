@@ -3,8 +3,8 @@
 
 image:
   repository: ghcr.io/snehalvs30/footnote
-  tag: latest          # releases pin an exact build (sha-xxxxxxx) by changing this line in Git
-  pullPolicy: Always
+  tag: "sha-97b7e32"   # the exact build that runs; a release changes this line
+  pullPolicy: IfNotPresent   # pinned tags never change
 
 replicas: 1
 
