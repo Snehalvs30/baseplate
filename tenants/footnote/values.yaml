@@ -9,8 +9,7 @@ image:
 replicas: 1
 
 # Kubernetes Secret holding database-password, jwt-secret and anthropic-api-key.
-# Created by hand locally for now; External Secrets Operator creates it from
-# AWS Secrets Manager from Day 6.
+# Created by External Secrets Operator from AWS Secrets Manager (see externalSecret).
 secretName: footnote-secrets
 
 llmProvider: anthropic
@@ -37,3 +36,11 @@ resources:
     memory: 768Mi      # the embedding model is loaded at startup
   limits:
     memory: 1536Mi
+
+# Where the Secret above comes from: a JSON secret in AWS Secrets Manager, synced by
+# External Secrets Operator. Environments set remoteKey (e.g. baseplate/local/<tenant>).
+externalSecret:
+  enabled: true
+  store: aws-secrets-manager
+  remoteKey: ""
+  refreshInterval: 1m   # short, so rotation shows up quickly; 1h is typical in production

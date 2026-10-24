@@ -4,3 +4,5 @@ postgres:
   enabled: true
 ingress:
   host: ledgerline.localhost
+externalSecret:
+  remoteKey: baseplate/local/ledgerline

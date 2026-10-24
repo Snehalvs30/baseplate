@@ -11,8 +11,8 @@ image:
 # the Kafka consumer group all coordinate safely across replicas.
 replicas: 2
 
-# Kubernetes Secret with db-password and jwt-secret (by hand for now; External
-# Secrets Operator from Day 6).
+# Kubernetes Secret with db-password and jwt-secret, created by External Secrets
+# Operator from AWS Secrets Manager (see externalSecret below).
 secretName: ledgerline-secrets
 
 database:
@@ -45,3 +45,11 @@ ingress:
 resources:
   requests: { cpu: 250m, memory: 512Mi }
   limits: { memory: 768Mi }
+
+# Where the Secret above comes from: a JSON secret in AWS Secrets Manager, synced by
+# External Secrets Operator. Environments set remoteKey (e.g. baseplate/local/<tenant>).
+externalSecret:
+  enabled: true
+  store: aws-secrets-manager
+  remoteKey: ""
+  refreshInterval: 1m   # short, so rotation shows up quickly; 1h is typical in production
