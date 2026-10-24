@@ -1,0 +1,7 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+# Personal values (your IP address, email); see each folder's terraform.tfvars.example
+terraform.tfvars

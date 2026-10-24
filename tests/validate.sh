@@ -54,6 +54,20 @@ if lines=$(python3 tests/check_applications.py --remote-charts "$OUT/remote"); t
   done <<< "$lines"
 fi
 
+step "Terraform: formatting and validation"
+if command -v terraform >/dev/null; then
+  terraform fmt -check -recursive infra || fail "terraform fmt (run: terraform fmt -recursive infra)"
+  for dir in infra/bootstrap infra/envs/dev infra/envs/prod; do
+    if (cd "$dir" && terraform init -backend=false -input=false >/dev/null && terraform validate -no-color >/dev/null); then
+      echo "OK: $dir"
+    else
+      fail "terraform validate $dir"
+    fi
+  done
+else
+  echo "SKIPPED: terraform isn't installed"
+fi
+
 step "Images are pinned (no :latest, no missing tag)"
 unpinned=$(grep -hE '^[[:space:]]*image:' "$OUT"/*.yaml | sed -E 's/^[[:space:]]*image:[[:space:]]*"?([^" ]+)"?.*/\1/' | sort -u \
   | awk -F/ '{ last=$NF } last !~ /:/ || last ~ /:latest$/ { print }')
