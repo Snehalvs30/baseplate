@@ -4,8 +4,8 @@
 
 image:
   repository: ghcr.io/snehalvs30/ledgerline
-  tag: latest          # releases pin the commit SHA by changing this line in Git
-  pullPolicy: Always
+  tag: "19ffe6e831f6369a4a0214f5a83aaf69f6f6c642"   # the exact build that runs; a release changes this line
+  pullPolicy: IfNotPresent   # pinned tags never change, so no re-download on restart
 
 # Two instances on purpose: the outbox relay (FOR UPDATE SKIP LOCKED), Flyway and
 # the Kafka consumer group all coordinate safely across replicas.
@@ -69,4 +69,4 @@ podAnnotations:
 # Zero-downtime rollouts: pause this long after a pod is told to stop, so routing
 # updates before the app closes its port. 0 disables the pause.
 gracefulShutdown:
-  preStopSeconds: 0
+  preStopSeconds: 10

@@ -128,19 +128,27 @@ spec:
               path: /actuator/health/liveness
               port: http
             periodSeconds: 5
-            failureThreshold: 60   # up to 5 minutes: the tracing agent slows JVM startup
+            timeoutSeconds: 3
+            failureThreshold: 60   # up to 5 minutes: a busy laptop (or the tracing agent) slows JVM startup
+          # Ready = receives traffic. Taken out of rotation after ~10 s of failures.
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
             periodSeconds: 5
+            timeoutSeconds: 3
             failureThreshold: 3
+          # Alive = not stuck. Deliberately lenient: a busy JVM under load can answer
+          # slowly, and restarting it then turns "slow" into "down" (seen in the first
+          # rollout test, with the default 1-second timeout). Restart only after a full
+          # minute without an answer.
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             periodSeconds: 10
-            failureThreshold: 3
+            timeoutSeconds: 5
+            failureThreshold: 6
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
