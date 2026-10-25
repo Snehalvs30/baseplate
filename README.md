@@ -131,6 +131,8 @@ trailing space in a file name (ArgoCD skipped the file), a chart value under the
 (Helm ignored it), unpinned chart versions and `:latest` images.
 
 ## Screenshots
+**The App of Apps in ArgoCD:** one root application manages every platform component and tenant:
+![ArgoCD App of Apps](docs/images/argocd-app-of-apps.png)
 
 **Ledgerline's requests traced on EKS** (OpenTelemetry Java agent, no code changes):
 ![Traces in Grafana Tempo on EKS](docs/images/eks-traces.png)
