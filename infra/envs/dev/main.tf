@@ -90,7 +90,7 @@ resource "aws_iam_role" "tenant_secrets" {
     Statement = [{
       Effect    = "Allow"
       Principal = { AWS = aws_iam_role.external_secrets.arn }
-      Action    = "sts:AssumeRole"
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
     }]
   })
 }
@@ -116,7 +116,7 @@ resource "aws_iam_role_policy" "external_secrets_assume_tenants" {
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = "sts:AssumeRole"
+      Action   = ["sts:AssumeRole", "sts:TagSession"]
       Resource = [for role in aws_iam_role.tenant_secrets : role.arn]
     }]
   })
