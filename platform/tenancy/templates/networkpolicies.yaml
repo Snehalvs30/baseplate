@@ -1,5 +1,6 @@
 {{- $ingressNamespace := .Values.ingressNamespace }}
 {{- $observabilityNamespace := .Values.observabilityNamespace }}
+{{- $databaseCIDRs := .Values.databaseEgressCIDRs }}
 {{- range .Values.tenants }}
 ---
 # 1. Deny everything, in and out. Every allowed path below is an explicit exception.
@@ -91,9 +92,30 @@ spec:
       ports:
         - { protocol: TCP, port: 4317 }
         - { protocol: TCP, port: 4318 }
+{{- if $databaseCIDRs }}
+---
+# 6. Managed databases outside the cluster (RDS): PostgreSQL's port, to the private
+#    subnets only. Which database a tenant can log in to is decided by its credentials.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-database-egress
+  namespace: {{ .namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        {{- range $databaseCIDRs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: 5432 }
+{{- end }}
 {{- if .internetEgress }}
 ---
-# 6. Outbound HTTPS to the internet only (e.g. an LLM API). Private address ranges
+# 7. Outbound HTTPS to the internet only (e.g. an LLM API). Private address ranges
 #    are excluded, so this can't be used to reach other tenants or cloud internals.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

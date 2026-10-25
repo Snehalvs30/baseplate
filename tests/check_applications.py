@@ -18,7 +18,7 @@ import yaml
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 THIS_REPO = "github.com/snehalvs30/baseplate"
-FOLDERS = ["platform/bootstrap/apps", "platform/bootstrap/disabled"]
+FOLDERS = ["platform/bootstrap/apps", "platform/bootstrap/disabled", "platform/bootstrap/eks-dev/apps"]
 VERSION = re.compile(r"^v?\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$")
 
 errors = []
@@ -29,7 +29,8 @@ def error(message):
 
 
 def applications():
-    files = [os.path.join(REPO_ROOT, "platform/bootstrap/root-application.yaml")]
+    files = [os.path.join(REPO_ROOT, "platform/bootstrap/root-application.yaml"),
+             os.path.join(REPO_ROOT, "platform/bootstrap/eks-dev/root.yaml")]
     for folder in FOLDERS:
         path = os.path.join(REPO_ROOT, folder)
         for name in sorted(os.listdir(path)):
@@ -59,9 +60,10 @@ def main():
             error(f"{file}: expected kind Application, found {app.get('kind')}")
             continue
         name = app.get("metadata", {}).get("name", "")
-        if name in names:
-            error(f"{file}: Application name {name!r} is also used in {names[name]}")
-        names[name] = file
+        key = ("eks" if "eks-dev" in file else "local", name)
+        if key in names:
+            error(f"{file}: Application name {name!r} is also used in {names[key]}")
+        names[key] = file
 
         spec = app.get("spec", {})
         if not spec.get("destination", {}).get("namespace"):

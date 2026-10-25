@@ -16,6 +16,8 @@ locals {
   public_cidrs  = [for i in range(var.az_count) : cidrsubnet(var.cidr, 4, i)]
   private_cidrs = [for i in range(var.az_count) : cidrsubnet(var.cidr, 4, i + 8)]
   nat_count     = var.single_nat_gateway ? 1 : var.az_count
+  # Lets the cluster's cloud controller find the subnets when it creates load balancers.
+  cluster_tag = var.cluster_name == "" ? {} : { "kubernetes.io/cluster/${var.cluster_name}" = "shared" }
 }
 
 resource "aws_vpc" "this" {
@@ -35,10 +37,10 @@ resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = local.public_cidrs[count.index]
   availability_zone = local.azs[count.index]
-  tags = {
+  tags = merge(local.cluster_tag, {
     Name                     = "${var.name}-public-${local.azs[count.index]}"
     "kubernetes.io/role/elb" = "1" # where internet-facing load balancers go
-  }
+  })
 }
 
 resource "aws_subnet" "private" {
@@ -46,10 +48,10 @@ resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = local.private_cidrs[count.index]
   availability_zone = local.azs[count.index]
-  tags = {
+  tags = merge(local.cluster_tag, {
     Name                              = "${var.name}-private-${local.azs[count.index]}"
     "kubernetes.io/role/internal-elb" = "1"
-  }
+  })
 }
 
 # ---- Outbound internet for private subnets: one NAT (cheap) or one per zone (resilient) ----

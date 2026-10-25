@@ -32,11 +32,15 @@ render() {   # name, chart, values files...
 render footnote tenants/footnote tenants/footnote/values.yaml tenants/footnote/values-local.yaml
 render ledgerline tenants/ledgerline tenants/ledgerline/values.yaml tenants/ledgerline/values-local.yaml
 render tenancy platform/tenancy platform/tenancy/values.yaml
+render footnote-eks tenants/footnote tenants/footnote/values.yaml tenants/footnote/values-eks.yaml
+render ledgerline-eks tenants/ledgerline tenants/ledgerline/values.yaml tenants/ledgerline/values-eks.yaml
+render tenancy-eks platform/tenancy platform/tenancy/values.yaml platform/tenancy/values-eks.yaml
 echo "Rendered: $(ls "$OUT" | tr '\n' ' ')"
 
 step "Kubernetes schemas: rendered charts and plain manifests"
 "${KUBECONFORM[@]}" "$OUT"/*.yaml platform/bootstrap/root-application.yaml \
   platform/bootstrap/apps/*.yaml platform/bootstrap/disabled/*.yaml platform/secret-store/*.yaml \
+  platform/bootstrap/eks-dev/*.yaml platform/bootstrap/eks-dev/apps/*.yaml platform/secret-store-eks/*.yaml \
   || fail "kubeconform"
 
 step "ArgoCD Applications"

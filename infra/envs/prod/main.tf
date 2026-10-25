@@ -37,6 +37,7 @@ locals {
 
 module "network" {
   source             = "../../modules/network"
+  cluster_name       = local.name
   name               = local.name
   cidr               = "10.30.0.0/16"
   az_count           = 3

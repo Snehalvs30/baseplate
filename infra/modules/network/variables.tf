@@ -24,3 +24,9 @@ variable "single_nat_gateway" {
   description = "One shared NAT gateway (cheaper) instead of one per zone (survives a zone outage)."
   default     = true
 }
+
+variable "cluster_name" {
+  type        = string
+  description = "EKS cluster that will create load balancers in these subnets (tags them)."
+  default     = ""
+}

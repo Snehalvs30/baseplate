@@ -46,3 +46,7 @@ observabilityNamespace: platform-observability
 # Who may look inside a tenant's namespace. In a real company these groups come
 # from single sign-on (e.g. "team-payments" in the identity provider).
 developerGroupPrefix: "tenant:"
+
+# Managed databases outside the cluster that tenants may reach on port 5432 (set per
+# cluster; none locally, where databases run in the tenant's own namespace).
+databaseEgressCIDRs: []
