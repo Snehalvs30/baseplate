@@ -43,4 +43,5 @@ externalSecret:
   enabled: true
   store: aws-secrets-manager
   remoteKey: ""
+  extraRemoteKeys: []   # more JSON secrets to merge in (later ones win on duplicate keys)
   refreshInterval: 1m   # short, so rotation shows up quickly; 1h is typical in production

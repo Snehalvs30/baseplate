@@ -8,7 +8,8 @@
 terraform {
   required_version = ">= 1.10"
   required_providers {
-    aws = { source = "hashicorp/aws", version = "~> 6.0" }
+    aws    = { source = "hashicorp/aws", version = "~> 6.0" }
+    random = { source = "hashicorp/random", version = "~> 3.6" }
   }
   backend "s3" {
     key          = "envs/prod/terraform.tfstate"
@@ -30,6 +31,8 @@ data "aws_caller_identity" "current" {}
 locals {
   name    = "baseplate-prod"
   tenants = ["ledgerline", "footnote"]
+  # The key each app's chart expects its database password under.
+  password_keys = { ledgerline = "db-password", footnote = "database-password" }
 }
 
 module "network" {
@@ -55,18 +58,47 @@ module "eks" {
   log_retention_days   = 30
 }
 
-# One role per tenant for External Secrets: each can read only its own secrets
-# (baseplate/prod/<tenant>/*), through a service account in its own namespace.
-module "tenant_secrets" {
-  source   = "../../modules/irsa-role"
-  for_each = toset(local.tenants)
+# Secrets access with EKS Pod Identity. External Secrets Operator gets its own role,
+# which may do one thing: assume a tenant's role. Each tenant role may read only that
+# tenant's secrets (baseplate/prod/<tenant>/*). The platform's per-tenant secret stores
+# pin a namespace to its role, so one tenant can't read another's secrets.
+resource "aws_iam_role" "external_secrets" {
+  name = "${local.name}-external-secrets"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "pods.eks.amazonaws.com" }
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
+    }]
+  })
+}
 
-  name              = "${local.name}-${each.key}-secrets"
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  oidc_issuer       = module.eks.oidc_issuer
-  namespace         = "tenant-${each.key}"
-  service_account   = "secrets-reader"
-  policy_json = jsonencode({
+resource "aws_eks_pod_identity_association" "external_secrets" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "external-secrets"
+  service_account = "platform-external-secrets" # created by the External Secrets chart
+  role_arn        = aws_iam_role.external_secrets.arn
+}
+
+resource "aws_iam_role" "tenant_secrets" {
+  for_each = toset(local.tenants)
+  name     = "${local.name}-${each.key}-secrets"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { AWS = aws_iam_role.external_secrets.arn }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "tenant_secrets" {
+  for_each = toset(local.tenants)
+  name     = "read-own-secrets"
+  role     = aws_iam_role.tenant_secrets[each.key].id
+  policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
@@ -74,4 +106,39 @@ module "tenant_secrets" {
       Resource = "arn:aws:secretsmanager:us-east-2:${data.aws_caller_identity.current.account_id}:secret:baseplate/prod/${each.key}/*"
     }]
   })
+}
+
+resource "aws_iam_role_policy" "external_secrets_assume_tenants" {
+  name = "assume-tenant-roles"
+  role = aws_iam_role.external_secrets.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "sts:AssumeRole"
+      Resource = [for role in aws_iam_role.tenant_secrets : role.arn]
+    }]
+  })
+}
+
+# One PostgreSQL instance per tenant. Production: a standby in another zone (multi-AZ),
+# a week of backups, deletion protection, a final snapshot, and a secret recovery window.
+module "database" {
+  source   = "../../modules/rds"
+  for_each = toset(local.tenants)
+
+  name                       = "${local.name}-${each.key}"
+  vpc_id                     = module.network.vpc_id
+  subnet_ids                 = module.network.private_subnet_ids
+  allowed_security_group_ids = [module.eks.cluster_security_group_id]
+  db_name                    = each.key
+  username                   = each.key
+  password_key               = local.password_keys[each.key]
+  secret_name                = "baseplate/prod/${each.key}/database"
+  instance_class             = "db.t4g.small"
+  multi_az                   = true
+  backup_retention_days      = 7
+  deletion_protection        = true
+  final_snapshot             = true
+  secret_recovery_days       = 7
 }

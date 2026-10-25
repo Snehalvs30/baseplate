@@ -7,5 +7,13 @@ output "configure_kubectl" {
 }
 
 output "tenant_secret_role_arns" {
-  value = { for tenant, role in module.tenant_secrets : tenant => role.role_arn }
+  value = { for tenant, role in aws_iam_role.tenant_secrets : tenant => role.arn }
+}
+
+output "external_secrets_role_arn" {
+  value = aws_iam_role.external_secrets.arn
+}
+
+output "database_hosts" {
+  value = { for tenant, db in module.database : tenant => db.address }
 }

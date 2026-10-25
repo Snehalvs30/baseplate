@@ -58,3 +58,9 @@ variable "log_retention_days" {
   type    = number
   default = 7
 }
+
+variable "node_ami_type" {
+  type        = string
+  description = "Node image: AL2023_ARM_64_STANDARD (Graviton) or AL2023_x86_64_STANDARD (Intel/AMD); must match the instance types."
+  default     = "AL2023_ARM_64_STANDARD"
+}

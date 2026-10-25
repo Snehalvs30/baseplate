@@ -1,11 +1,18 @@
 # Created once, before everything else: the S3 bucket that stores Terraform's state for
-# every environment, and a monthly budget alert. Its own (tiny) state stays local.
-#
-#   terraform init && terraform apply
+# every environment, and a monthly budget alert. Its own state starts local (the bucket
+# doesn't exist yet), then moves into the bucket (see the backend block below).
 terraform {
   required_version = ">= 1.10"
   required_providers {
     aws = { source = "hashicorp/aws", version = "~> 6.0" }
+  }
+  # After the first apply, this configuration's own state moves into the bucket it
+  # created:  terraform init -migrate-state -backend-config="bucket=baseplate-tfstate-<account id>"
+  backend "s3" {
+    key          = "bootstrap/terraform.tfstate"
+    region       = "us-east-2"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 

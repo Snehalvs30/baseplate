@@ -92,11 +92,6 @@ resource "aws_eks_access_policy_association" "admin" {
   depends_on = [aws_eks_access_entry.admin]
 }
 
-# ---- IRSA: lets a Kubernetes service account assume a specific AWS role ----
-resource "aws_iam_openid_connect_provider" "this" {
-  url            = aws_eks_cluster.this.identity[0].oidc[0].issuer
-  client_id_list = ["sts.amazonaws.com"]
-}
 
 # ---- Nodes ----
 resource "aws_iam_role" "node" {
@@ -153,7 +148,7 @@ resource "aws_eks_node_group" "default" {
   node_group_name = "default"
   node_role_arn   = aws_iam_role.node.arn
   subnet_ids      = var.subnet_ids
-  ami_type        = "AL2023_ARM_64_STANDARD"
+  ami_type        = var.node_ami_type
   instance_types  = var.node_instance_types
   capacity_type   = var.node_capacity_type
 
@@ -197,6 +192,16 @@ resource "aws_eks_addon" "kube_proxy" {
 resource "aws_eks_addon" "coredns" {
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "coredns"
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+  depends_on                  = [aws_eks_node_group.default]
+}
+
+# EKS Pod Identity: gives pods an AWS role without an IAM OIDC provider (which this
+# account's service control policy forbids, ruling out IRSA). Runs on the nodes.
+resource "aws_eks_addon" "pod_identity_agent" {
+  cluster_name                = aws_eks_cluster.this.name
+  addon_name                  = "eks-pod-identity-agent"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
   depends_on                  = [aws_eks_node_group.default]
