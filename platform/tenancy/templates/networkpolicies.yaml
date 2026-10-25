@@ -92,7 +92,7 @@ spec:
       ports:
         - { protocol: TCP, port: 4317 }
         - { protocol: TCP, port: 4318 }
-{{- if $databaseCIDRs }}
+{{- if and $databaseCIDRs .databaseEgress }}
 ---
 # 6. Managed databases outside the cluster (RDS): PostgreSQL's port, to the private
 #    subnets only. Which database a tenant can log in to is decided by its credentials.
