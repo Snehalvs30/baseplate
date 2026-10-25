@@ -18,3 +18,5 @@ otel:
   environment: eks-dev
 gracefulShutdown:
   preStopSeconds: 10
+podAnnotations:
+  baseplate.io/release: "eks-1"
